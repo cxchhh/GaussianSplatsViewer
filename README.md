@@ -18,10 +18,10 @@ movement (arrow keys)
 - up/down arrow keys to move forward/back
 - `space` to jump
 
-camera angle (wasd)
-
-- `a`/`d` to turn camera left/right
-- `w`/`s` to tilt camera up/down
+camera move (wasd)
+- `a`/`d` to move camera left/right
+- `w`/`s` to move camera forward/back
+- `space`/`shift` to move camera up/down
 - `q`/`e` to roll camera counterclockwise/clockwise
 - `i`/`k` and `j`/`l` to orbit
 
