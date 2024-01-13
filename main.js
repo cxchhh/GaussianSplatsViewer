@@ -732,8 +732,8 @@ void main () {
 `.trim();
 
 let defaultViewMatrix = [
-    0.47, 0.04, 0.88, 0, -0.11, 0.99, 0.02, 0, -0.88, -0.11, 0.47, 0, 0.07,
-    0.03, 6.55, 1,
+    0.47, 0.04, 0.88, 0, -0.11, 0.99, 0.02, 0, -0.88, -0.11, 0.47, 0, 0,
+    0, 0, 1,
 ];
 let viewMatrix = defaultViewMatrix;
 async function main() {
@@ -746,8 +746,8 @@ async function main() {
     const url = new URL(
         // "nike.splat",
         // location.href,
-        params.get("url") || "train.splat",
-        "https://huggingface.co/cakewalk/splat-data/resolve/main/",
+        params.get("url") || "model.splat",
+        location.href+"splats/",
     );
     const req = await fetch(url, {
         mode: "cors", // no-cors, *cors, same-origin
@@ -756,7 +756,7 @@ async function main() {
     console.log(req);
     if (req.status != 200)
         throw new Error(req.status + " Unable to load " + req.url);
-
+    
     const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
     const reader = req.body.getReader();
     let splatData = new Uint8Array(req.headers.get("content-length"));
@@ -975,7 +975,7 @@ async function main() {
                     (e.deltaY * scale) / innerHeight,
                     0,
                 );
-            } else if (e.ctrlKey || e.metaKey) {
+            } else {
                 // inv = rotate4(inv,  (e.deltaX * scale) / innerWidth,  0, 0, 1);
                 // inv = translate4(inv,  0, (e.deltaY * scale) / innerHeight, 0);
                 // let preY = inv[13];
@@ -986,13 +986,7 @@ async function main() {
                     (-10 * (e.deltaY * scale)) / innerHeight,
                 );
                 // inv[13] = preY;
-            } else {
-                let d = 4;
-                inv = translate4(inv, 0, 0, d);
-                inv = rotate4(inv, -(e.deltaX * scale) / innerWidth, 0, 1, 0);
-                inv = rotate4(inv, (e.deltaY * scale) / innerHeight, 1, 0, 0);
-                inv = translate4(inv, 0, 0, -d);
-            }
+                }
 
             viewMatrix = invert4(inv);
         },
@@ -1005,44 +999,38 @@ async function main() {
         e.preventDefault();
         startX = e.clientX;
         startY = e.clientY;
-        down = e.ctrlKey || e.metaKey ? 2 : 1;
+        down = e.ctrlKey || e.metaKey || e.button > 0 ? 2 : 1;
+        down = e.button == 2 ? 2 : down;
     });
     canvas.addEventListener("contextmenu", (e) => {
         carousel = false;
         e.preventDefault();
-        startX = e.clientX;
-        startY = e.clientY;
-        down = 2;
     });
 
     canvas.addEventListener("mousemove", (e) => {
         e.preventDefault();
+        let inv = invert4(viewMatrix);
         if (down == 1) {
-            let inv = invert4(viewMatrix);
-            let dx = (5 * (e.clientX - startX)) / innerWidth;
-            let dy = (5 * (e.clientY - startY)) / innerHeight;
-            let d = 4;
+            let dx = (2 * (e.clientX - startX)) / innerWidth;
+            let dy = (2 * (e.clientY - startY)) / innerHeight;
+            let d = 5;
 
-            inv = translate4(inv, 0, 0, d);
-            inv = rotate4(inv, dx, 0, 1, 0);
-            inv = rotate4(inv, -dy, 1, 0, 0);
-            inv = translate4(inv, 0, 0, -d);
-            // let postAngle = Math.atan2(inv[0], inv[10])
-            // inv = rotate4(inv, postAngle - preAngle, 0, 0, 1)
-            // console.log(postAngle)
+            //inv = translate4(inv, 0, 0, d);
+            inv = rotate4(inv, -dx, 0, 1, 0);
+            inv = rotate4(inv, dy, 1, 0, 0);
+            
             viewMatrix = invert4(inv);
 
             startX = e.clientX;
             startY = e.clientY;
         } else if (down == 2) {
-            let inv = invert4(viewMatrix);
             // inv = rotateY(inv, );
             // let preY = inv[13];
             inv = translate4(
                 inv,
-                (-10 * (e.clientX - startX)) / innerWidth,
+                (-5 * (e.clientX - startX)) / innerWidth,
+                (-5 * (e.clientY - startY)) / innerHeight,
                 0,
-                (10 * (e.clientY - startY)) / innerHeight,
             );
             // inv[13] = preY;
             viewMatrix = invert4(inv);
@@ -1052,8 +1040,8 @@ async function main() {
         }
     });
     canvas.addEventListener("mouseup", (e) => {
-        e.preventDefault();
         down = false;
+        e.preventDefault();
         startX = 0;
         startY = 0;
     });
@@ -1091,12 +1079,10 @@ async function main() {
                 let dy = (4 * (e.touches[0].clientY - startY)) / innerHeight;
 
                 let d = 4;
-                inv = translate4(inv, 0, 0, d);
                 // inv = translate4(inv,  -x, -y, -z);
                 // inv = translate4(inv,  x, y, z);
                 inv = rotate4(inv, dx, 0, 1, 0);
                 inv = rotate4(inv, -dy, 1, 0, 0);
-                inv = translate4(inv, 0, 0, -d);
 
                 viewMatrix = invert4(inv);
 
@@ -1200,15 +1186,17 @@ async function main() {
         if (activeKeys.includes("ArrowRight"))
             inv = translate4(inv, 0.03, 0, 0);
         // inv = rotate4(inv, 0.01, 0, 1, 0);
-        if (activeKeys.includes("KeyA")) inv = rotate4(inv, -0.01, 0, 1, 0);
-        if (activeKeys.includes("KeyD")) inv = rotate4(inv, 0.01, 0, 1, 0);
-        if (activeKeys.includes("KeyQ")) inv = rotate4(inv, 0.01, 0, 0, 1);
-        if (activeKeys.includes("KeyE")) inv = rotate4(inv, -0.01, 0, 0, 1);
-        if (activeKeys.includes("KeyW")) inv = rotate4(inv, 0.005, 1, 0, 0);
-        if (activeKeys.includes("KeyS")) inv = rotate4(inv, -0.005, 1, 0, 0);
+        if (activeKeys.includes("KeyA")) inv = translate4(inv, -0.025, 0, 0);
+        if (activeKeys.includes("KeyD")) inv = translate4(inv, 0.025, 0, 0);
+        if (activeKeys.includes("Space")) inv = translate4(inv, 0, -0.025, 0);
+        if (shiftKey) inv = translate4(inv, 0, 0.025, 0);
+        if (activeKeys.includes("KeyW")) inv = translate4(inv, 0, 0, 0.025);
+        if (activeKeys.includes("KeyS")) inv = translate4(inv, 0, 0, -0.025);
+        if (activeKeys.includes("KeyQ")) inv = rotate4(inv, -0.01, 0, 0, 1);
+        if (activeKeys.includes("KeyE")) inv = rotate4(inv, 0.01, 0, 0, 1);
 
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        let isJumping = activeKeys.includes("Space");
+        let isJumping = activeKeys.includes("KeyJ");
         for (let gamepad of gamepads) {
             if (!gamepad) continue;
 
